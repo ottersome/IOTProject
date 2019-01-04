@@ -10,13 +10,27 @@ from genderize import Genderize
 
 from clarifai.rest import ClarifaiApp
 from clarifai.rest import Image as ClImage
+import dan,dai
+from PIL import Image
+from dan import NoData
 import urllib.parse,urllib.error,urllib.request,requests,wikipedia,os,json,sys,praw,bs4 as bs,time
 
 line_bot_api = LineBotApi(
-    'rKM2qY9n+tqDGjPPsvH4u/E16lKk0F9OLKM3LpGsquug2qGGJDkYBKb6H7omveX1tEiLEztK1lk9AS1OVozaA//uXxLmVulJq3Kxis8oV2BtyhWhndyq5haWJkzzawEdvrape4+fWLhjGBcarHD53QdB04t89/1O/w1cDnyilFU=')  # LineBot's Channel access token
-handler = WebhookHandler('b46c4a23e6d1e7e24973d20ce9f8f280')  # LineBot's Channel secret
+'2m0NGSS9rxxgiKTKD+yPIRQyr2n7tblyqouzvVe6uG/khmGixOocmMKHe9MsHo3r/45pZXkOO7w+Wh2VfDFr//A/wTrX195HLBKYjyD23J1vcduedkk7vuoGWkvKgLrLfeTLVSmAiBjQ/1XizufZiAdB04t89/1O/w1cDnyilFU=')#Channel Access Token
+handler = WebhookHandler('021513e80e6e9b84571f29cc81aedf0a')  # LineBot's Channel secret
 user_id_set = set()  # LineBot's Friend's user id
 app = Flask(__name__)
+###registration to the iottalk2 server###
+host ='iottalk2.tw'
+device_name = ''
+username=None
+
+device_model = ''
+idf_list=[]
+odf_list=[]
+
+
+
 
 
 def loadUserId():
@@ -32,10 +46,7 @@ def loadUserId():
         return None
 
 
-def saveUserId(userId):
-    idFile = open('idfile', 'a')
-    idFile.write(userId + ';')
-    idFile.close()
+
 
 
 @app.route("/", methods=['GET'])
@@ -47,19 +58,33 @@ def hello():
 def callback():
     signature = request.headers['X-Line-Signature']  # get X-Line-Signature header value
     body = request.get_data(as_text=True)  # get request body as text
-    print("Request body: " + body, "Signature: " + signature)
+
+    #print("Request body: " + body, "Signature: " + signature)
     try:
         handler.handle(body, signature)  # handle webhook body
     except InvalidSignatureError:
         abort(400)
     return 'OK'
 
+#writes image sent from user to a file called image
+@handler.add(MessageEvent, message = ImageMessage)
+def handle_message(event):
+    message_id = event.message.id
+    message_content = line_bot_api.get_message_content(message_id)
+    with open('image','wb')as fd:
+        for chunk in message_content.iter_content():
+            fd.write(chunk)
+    app = ClarifaiApp(api_key = 'fe71b193ff3f4e95bb996226ed2397a1')
+    food='food-items-v1.0'
+    model = app.models.get('food-items-v1.0')
+    response = model.predict_by_filename('image')
+    print('successo')
+    #now we have to parse answers
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    Msg = event.message.text
-    if Msg == 'Hello, world': return
-    print('GotMsg:{}'.format(Msg))
+    msg = event.message.text  
+
 
     # line_bot_api.reply_message(event.reply_token,TextSendMessage(text="收到訊息!!"))   # Reply API example
 
@@ -136,17 +161,17 @@ if __name__ == "__main__":
             ################################################################################### push welcome text
 
 
-            line_bot_api.push_message(userId, TextSendMessage(text='Hallo there!!!'))
+            #line_bot_api.push_message(userId, TextSendMessage(text='Hallo there!!!'))
             sticker_message = StickerSendMessage(
                 package_id='1', sticker_id='134'
             )
-            line_bot_api.push_message(userId, sticker_message)
-            line_bot_api.push_message(userId, TextSendMessage(text='I could tell you what dish u can make from the ingredients you have :D'))
+            #line_bot_api.push_message(userId, sticker_message)
+            #line_bot_api.push_message(userId, TextSendMessage(text='I could tell you what dish u can make from the ingredients you have :D'))
             time.sleep(3)
-            line_bot_api.push_message(userId, TextSendMessage(text='Please upload your ingredients photo to this link https://postimages.org/ and send me the \'Direct link\' at the bottom of your picture (.png), then i\'ll help you'))
+            #line_bot_api.push_message(userId, TextSendMessage(text='Please upload your ingredients photo to this link https://postimages.org/ and send me the \'Direct link\' at the bottom of your picture (.png), then i\'ll help you'))
             time.sleep(2)
 
-            line_bot_api.push_message(userId, TextSendMessage(text='i dont expect any photos other than food tho *tehee*'))
+            #line_bot_api.push_message(userId, TextSendMessage(text='i dont expect any photos other than food tho *tehee*'))
             sticker_message = StickerSendMessage(
                 package_id='1', sticker_id='10'
             )
@@ -159,4 +184,9 @@ if __name__ == "__main__":
         print(e)
 
     app.run('127.0.0.1', port=32768, threaded=True, use_reloader=False)
+
+
+
+
+
 
