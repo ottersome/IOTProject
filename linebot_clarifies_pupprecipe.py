@@ -23,7 +23,7 @@ app = Flask(__name__)
 ServerURL = 'https://demo.iottalk.tw'
 Reg_addr = 'quemeves'
 DAN.profile['dm_name']='Recipe_AI'
-DAN.profile['df_list']=['tags', 'preferences','allergies','tags_receive','preferences_receive','allergies_receive']
+DAN.profile['df_list']=['tags', 'preferences','allergies','request_in','tags_receive','preferences_receive','allergies_receive', 'URL']
 DAN.profile['d_name']=None
 DAN.device_registration_with_retry(ServerURL,Reg_addr)
 #pasting the new image to pastebin
@@ -100,6 +100,7 @@ def handle_message(event):
     tagsies= ''
     for things in items:
         tagsies=tagsies+str(things)+','
+    tagsies = tagsies[:-1]
     DAN.push('tags',userId,tagsies)
     value = DAN.pull('tags_receive')
     print(value)
@@ -111,38 +112,49 @@ def handle_message(event):
     msg = event.message.text  
     userId = event.source.user_id
 
-    if msg =='allergies':
+    if msg =='Allergies':
         line_bot_api.push_message(userId, TextSendMessage(text= 'We want to know about your allergies! Following is a list of them, indicate which ones you have by the index number.'))
-        line_bot_api.push_message(userId, TextSendMessage(text='1.Milk\n2.eggs\n3.Fish\n4.Shellfish\n5.Tree nuts\n6.Peanuts\n7.Wheat\n8.Soybeans')) 
+        line_bot_api.push_message(userId, TextSendMessage(text='0.Milk\n1.eggs\n2.Fish\n3.Shellfish\n4.Tree nuts\n5.Peanuts\n6.Wheat\n7.Soybeans')) 
         line_bot_api.push_message(userId, TextSendMessage(text='Preface your message by saying \"These are my allergies\".')) 
     if msg[0:22] == 'These are my allergies':
         allergies = ''
         i=4
+        msg=msg.strip()
         msg = msg.split(' ')
         count = 0 
         for i in msg:
             if count>3:
                 allergies+=i+','
             count+=1
+        allergies = allergies[:-1]
         DAN.push('allergies',userId,allergies)
         value1 = DAN.pull('allergies_receive')
         print(value1)
-    if msg == 'utensils':
+    if msg == 'Utensils':
         line_bot_api.push_message(userId, TextSendMessage(text='We want to know what utensils you have! Following is a list of them, indicate by the index number of the utensil. '))
-        line_bot_api.push_message(userId, TextSendMessage(text='1.oven\n2.mixer\n3.knives\n4.DeepFryer\n5.peeler\n6.blender'))
+        line_bot_api.push_message(userId, TextSendMessage(text='0.oven\n1.mixer\n2.knives\n3.DeepFryer\n4.peeler\n5.blender'))
         line_bot_api.push_message(userId,TextSendMessage(text='Preface your message by saying \'These are my utensils\'.'))
+
+    #sending the user's available utensils to iottalk
     if msg[0:21] == 'These are my utensils':
         utensils = ''
+        msg=msg.strip()
         msg=msg.split(' ')
-        count=0
+        index=0
         for a in msg:
-            if count>3:
+            if index>3:
                 utensils+=a+','
-            count+=1
+            index+=1
+        #getting rid of the last comma
+        utensils=utensils[:-1]
         print('these are the utensils i have '+utensils)
         DAN.push('preferences',userId,utensils)
         value2= DAN.pull('preferences_receive')
         print(value2)
+    if msg[0:11] == 'What are my':
+        msg=msg.split(' ')
+        msg = msg[3]
+        DAN.push('request_in',userId,msg)
     if not userId in user_id_set:
         user_id_set.add(userId)
         saveUserId(userId)
@@ -160,12 +172,18 @@ if __name__ == "__main__":
                 line_bot_api.push_message(userId,TextSendMessage(text='After you send the image, please send the word \'allergies\' or \'utensils\''))
             except:
                 continue
-
-
             ###################################################################################
     except Exception as e:
         print(e)
-
+    """
+    while(1):
+        pulling = DAN.pull('URL')
+        if pulling!=None:
+            try:
+                line_bot_api.push_message(pulling[0], TextSendMessage(text=str(pulling[1])))
+            except:
+                continue
+    """
     app.run('127.0.0.1', port=32768, threaded=True, use_reloader=False)
 
 
