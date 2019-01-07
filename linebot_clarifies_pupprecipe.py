@@ -7,44 +7,60 @@ from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage, ImageMessage, ImageSendMessage, VideoMessage, \
     AudioMessage, StickerSendMessage
 from genderize import Genderize
-
 from clarifai.rest import ClarifaiApp
 from clarifai.rest import Image as ClImage
-import dan,dai
+import DAN
 from PIL import Image
-from dan import NoData
 import urllib.parse,urllib.error,urllib.request,requests,wikipedia,os,json,sys,praw,bs4 as bs,time
-
+#from urllib import parse, request
 line_bot_api = LineBotApi(
 '2m0NGSS9rxxgiKTKD+yPIRQyr2n7tblyqouzvVe6uG/khmGixOocmMKHe9MsHo3r/45pZXkOO7w+Wh2VfDFr//A/wTrX195HLBKYjyD23J1vcduedkk7vuoGWkvKgLrLfeTLVSmAiBjQ/1XizufZiAdB04t89/1O/w1cDnyilFU=')#Channel Access Token
 handler = WebhookHandler('021513e80e6e9b84571f29cc81aedf0a')  # LineBot's Channel secret
 user_id_set = set()  # LineBot's Friend's user id
 app = Flask(__name__)
-###registration to the iottalk2 server###
-host ='iottalk2.tw'
-device_name = ''
-username=None
-
-device_model = ''
-idf_list=[]
-odf_list=[]
-
-
-
-
+###registration to the iottalk server###
+###remember to replace with actual idf
+ServerURL = 'https://demo.iottalk.tw'
+Reg_addr = 'quemeves'
+DAN.profile['dm_name']='Recipe_AI'
+DAN.profile['df_list']=['tags', 'preferences','allergies','tags_receive','preferences_receive','allergies_receive']
+DAN.profile['d_name']=None
+DAN.device_registration_with_retry(ServerURL,Reg_addr)
+#pasting the new image to pastebin
+#making the request and receiving the result
+def get_tags(result):
+    tags = []
+    for each in result['outputs'][0]['data']['concepts']:
+        tags.append(each['name'])
+    print(tags)
+    return tags
 
 def loadUserId():
     try:
         idFile = open('idfile', 'r')
         idList = idFile.readlines()
+        print(idList)
+        newList=[]
+        for item in idList:
+            try:
+                x=item.split(';')
+                newList.append(x[0])
+            except:
+                continue
         idFile.close()
-        idList = idList[0].split(';')
+        #idList = idList[0].split(';')
+        print(newList)
         idList.pop()
-        return idList
+        return newList
     except Exception as e:
         print(e)
         return None
 
+
+def saveUserId(userId):
+    idFile = open('idfile','a')
+    idFile.write(userId+';')
+    idFile.close()
 
 
 
@@ -69,6 +85,7 @@ def callback():
 #writes image sent from user to a file called image
 @handler.add(MessageEvent, message = ImageMessage)
 def handle_message(event):
+    userId = event.source.user_id
     message_id = event.message.id
     message_content = line_bot_api.get_message_content(message_id)
     with open('image','wb')as fd:
@@ -78,78 +95,57 @@ def handle_message(event):
     food='food-items-v1.0'
     model = app.models.get('food-items-v1.0')
     response = model.predict_by_filename('image')
-    print('successo')
-    #now we have to parse answers
+    items = get_tags(response)
+    items = items[0:5]
+    tagsies= ''
+    for things in items:
+        tagsies=tagsies+str(things)+','
+    DAN.push('tags',userId,tagsies)
+    value = DAN.pull('tags_receive')
+    print(value)
+
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
+
     msg = event.message.text  
-
-
-    # line_bot_api.reply_message(event.reply_token,TextSendMessage(text="收到訊息!!"))   # Reply API example
-
     userId = event.source.user_id
+
+    if msg =='allergies':
+        line_bot_api.push_message(userId, TextSendMessage(text= 'We want to know about your allergies! Following is a list of them, indicate which ones you have by the index number.'))
+        line_bot_api.push_message(userId, TextSendMessage(text='1.Milk\n2.eggs\n3.Fish\n4.Shellfish\n5.Tree nuts\n6.Peanuts\n7.Wheat\n8.Soybeans')) 
+        line_bot_api.push_message(userId, TextSendMessage(text='Preface your message by saying \"These are my allergies\".')) 
+    if msg[0:22] == 'These are my allergies':
+        allergies = ''
+        i=4
+        msg = msg.split(' ')
+        count = 0 
+        for i in msg:
+            if count>3:
+                allergies+=i+','
+            count+=1
+        DAN.push('allergies',userId,allergies)
+        value1 = DAN.pull('allergies_receive')
+        print(value1)
+    if msg == 'utensils':
+        line_bot_api.push_message(userId, TextSendMessage(text='We want to know what utensils you have! Following is a list of them, indicate by the index number of the utensil. '))
+        line_bot_api.push_message(userId, TextSendMessage(text='1.oven\n2.mixer\n3.knives\n4.DeepFryer\n5.peeler\n6.blender'))
+        line_bot_api.push_message(userId,TextSendMessage(text='Preface your message by saying \'These are my utensils\'.'))
+    if msg[0:21] == 'These are my utensils':
+        utensils = ''
+        msg=msg.split(' ')
+        count=0
+        for a in msg:
+            if count>3:
+                utensils+=a+','
+            count+=1
+        print('these are the utensils i have '+utensils)
+        DAN.push('preferences',userId,utensils)
+        value2= DAN.pull('preferences_receive')
+        print(value2)
     if not userId in user_id_set:
         user_id_set.add(userId)
         saveUserId(userId)
-
-    try:
-        line_bot_api.push_message(userId, TextSendMessage(text='Thank you!!, im processing your image'))
-        #sticker_message = StickerSendMessage(package_id='106', sticker_id='1')
-        line_bot_api.push_message(userId, StickerSendMessage(package_id='1', sticker_id='2'))
-        time.sleep(2)
-        line_bot_api.push_message(userId, TextSendMessage(text='emmmm...., give me a minute'))
-    #######################################################################################  clarifai API
-        results = ' '
-        app = ClarifaiApp(api_key='fe71b193ff3f4e95bb996226ed2397a1')
-        model = app.models.get('food-items-v1.0')
-        image = ClImage(
-            url= Msg)
-        result = model.predict([image])
-    #######################################################################################
-
-
-        for each in result['outputs'][0]['data']['concepts']:
-            # print(each['name']+', ',end='')
-            # results=results+each['name']+','
-            print(each['name'], ' ', each['value'])
-            #line_bot_api.push_message(userId, TextSendMessage(text=each['name']))
-            # print(results+'\n')
-
-            response = requests.get("http://www.recipepuppy.com/api/?i=" + results + each['name'] + "&q&p=1 ")
-
-            try:
-                data = json.loads(response.text)
-                results = results + each['name'] + ','
-            except:
-                pass
-        line_bot_api.push_message(userId, TextSendMessage(text='i see '+results))
-        print(results)
-        time.sleep(3)
-        data = json.loads(response.text)
-        # for each in data['results']:
-        #   print(each['title']+'\n'+'Link\t\t: '+each['href']+'\n'+'Ingredients\t: '+each['ingredients']+'\n'+each['thumbnail']+'\n')
-        line_bot_api.push_message(userId, TextSendMessage(text='and here are what you could make'))
-
-        time.sleep(2)
-        count=0
-        for each in data['results']:
-            texts = (each['title'] + '\n' + 'Link\t\t: ' + each['href'] + '\n' + 'Ingredients\t: ' + each['ingredients'])
-            print(texts)
-            line_bot_api.push_message(userId, TextSendMessage(text= texts))
-            count+=1
-            if(count==5):
-                break
-            time.sleep(2)
-
-        line_bot_api.push_message(userId, TextSendMessage(text='hope you enjoy :D'))
-        line_bot_api.push_message(userId, StickerSendMessage(package_id='1', sticker_id='132'))
-
-    except:
-        print('not an image url!!!!')
-        line_bot_api.push_message(userId, TextSendMessage(text='wait...you sent me an invalid url, or did u even send me an image url?!'))
-        line_bot_api.push_message(userId, StickerSendMessage(package_id='1', sticker_id='7'))
-        pass
 
 if __name__ == "__main__":
 
@@ -159,24 +155,11 @@ if __name__ == "__main__":
     try:
         for userId in user_id_set:
             ################################################################################### push welcome text
-
-
-            #line_bot_api.push_message(userId, TextSendMessage(text='Hallo there!!!'))
-            sticker_message = StickerSendMessage(
-                package_id='1', sticker_id='134'
-            )
-            #line_bot_api.push_message(userId, sticker_message)
-            #line_bot_api.push_message(userId, TextSendMessage(text='I could tell you what dish u can make from the ingredients you have :D'))
-            time.sleep(3)
-            #line_bot_api.push_message(userId, TextSendMessage(text='Please upload your ingredients photo to this link https://postimages.org/ and send me the \'Direct link\' at the bottom of your picture (.png), then i\'ll help you'))
-            time.sleep(2)
-
-            #line_bot_api.push_message(userId, TextSendMessage(text='i dont expect any photos other than food tho *tehee*'))
-            sticker_message = StickerSendMessage(
-                package_id='1', sticker_id='10'
-            )
-            line_bot_api.push_message(userId, sticker_message)
-
+            try:
+                line_bot_api.push_message(userId,TextSendMessage(text='First send an image with the food item you want, then some questions\n follow to make your experience more customized.'))
+                line_bot_api.push_message(userId,TextSendMessage(text='After you send the image, please send the word \'allergies\' or \'utensils\''))
+            except:
+                continue
 
 
             ###################################################################################
