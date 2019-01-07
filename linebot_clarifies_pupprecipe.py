@@ -23,7 +23,7 @@ app = Flask(__name__)
 ServerURL = 'https://demo.iottalk.tw'
 Reg_addr = 'quemeves'
 DAN.profile['dm_name']='Recipe_AI'
-DAN.profile['df_list']=['tags', 'preferences','allergies','request_in','tags_receive','preferences_receive','allergies_receive', 'URL']
+DAN.profile['df_list']=['tags', 'preferences','allergies','request_in','sendRecipeURL','tags_receive','preferences_receive','allergies_receive', 'URL','request_receive']
 DAN.profile['d_name']=None
 DAN.device_registration_with_retry(ServerURL,Reg_addr)
 #pasting the new image to pastebin
@@ -32,7 +32,7 @@ def get_tags(result):
     tags = []
     for each in result['outputs'][0]['data']['concepts']:
         tags.append(each['name'])
-    print(tags)
+    #print(tags)
     return tags
 
 def loadUserId():
@@ -102,8 +102,19 @@ def handle_message(event):
         tagsies=tagsies+str(things)+','
     tagsies = tagsies[:-1]
     DAN.push('tags',userId,tagsies)
-    value = DAN.pull('tags_receive')
-    print(value)
+    x= True
+    while(x):
+        value = DAN.pull('URL')
+        if value!=None:
+            print('now pulling '+str(value))
+            try:  
+                address = value[0]
+                site = value[1]
+                print('sending to '+userId+ " "+str(value[1]))
+                line_bot_api.push_message(userId, TextSendMessage(text=site))
+                x=False
+            except:
+                continue      
 
 
 @handler.add(MessageEvent, message=TextMessage)
@@ -151,10 +162,30 @@ def handle_message(event):
         DAN.push('preferences',userId,utensils)
         value2= DAN.pull('preferences_receive')
         print(value2)
+        
+    #getting the user's allergies or utensils
     if msg[0:11] == 'What are my':
         msg=msg.split(' ')
         msg = msg[3]
         DAN.push('request_in',userId,msg)
+        y = True
+        
+        while(y):
+            valores = DAN.pull('request_receive')
+            if valores!=None:
+                print("receiving "+str(valores))
+                
+                if valores[2] =='allergies':
+                    allergens ={'0':'Milk','1':'eggs','2':'Fish','3':'Shellfish', '4':'Tree Nuts', '5':'Peanuts','6':'Wheat','7':'Soybeans'}
+                    allergy_list = valores[1].split(',')
+                    stringo='You are allergic to: '
+                    for dongxi in range(len(allergy_list)):
+                        stringo+=str(allergens[dongxi])+','
+                    print(stringo)
+                    y=False
+                elif valores[2] == 'utensils':
+                    utensil_list = {'0':'oven','1':'mixer','2':'knives','3':'DeepFryer','4':'peeler', '5':'blender'}
+                
     if not userId in user_id_set:
         user_id_set.add(userId)
         saveUserId(userId)
@@ -166,28 +197,26 @@ if __name__ == "__main__":
 
     try:
         for userId in user_id_set:
-            ################################################################################### push welcome text
             try:
                 line_bot_api.push_message(userId,TextSendMessage(text='First send an image with the food item you want, then some questions\n follow to make your experience more customized.'))
                 line_bot_api.push_message(userId,TextSendMessage(text='After you send the image, please send the word \'allergies\' or \'utensils\''))
             except:
                 continue
-            ###################################################################################
     except Exception as e:
         print(e)
+    app.run('127.0.0.1', port=32768, threaded=True, use_reloader=False)
     """
-    while(1):
+    while True:
         pulling = DAN.pull('URL')
+        print(' we are pulling in '+str(pulling))
         if pulling!=None:
             try:
-                line_bot_api.push_message(pulling[0], TextSendMessage(text=str(pulling[1])))
+                if pulling[1]=='Null'or'null':
+                     line_bot_api.pushMessage(pulling[0],TextSendMessage(text='Sorry, could not retrieve a url for your image.'))
+                else:   
+                    print(str(pulling[0])+" and also getting "+str(pulling[1]))
+                    line_bot_api.push_message(pulling[0], TextSendMessage(text=str(pulling[1])))
             except:
-                continue
+                continue  
+        pulling2 = DAN.pull('request_in')
     """
-    app.run('127.0.0.1', port=32768, threaded=True, use_reloader=False)
-
-
-
-
-
-
