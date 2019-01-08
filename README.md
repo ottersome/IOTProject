@@ -1,7 +1,7 @@
-#Recipe API
+# Recipe API
 
 
-##Introduction
+## Introduction
 
 This is the final project for the "Design and Implementation of IOT Applications" at 
 National Chiao Tung University, Fall 2018 semseter.
@@ -14,13 +14,13 @@ For this project, the following libraries need to be installed:
 -PIL
 -requests
 
-##Description
+## Description
 
 For this projecct, we decided to utilize a combination of the LineBot API, the Clarifai image
 recognition library for Python, and simple database management to give our users the ability 
 to get a recommendation for possible recipes using a simple image.
 
-###How does it work?
+### How does it work?
 
 The first step is adding our LineBot as a friend on the popular messaging app Line. When the program is run,
 the bot will send a series of instructions, which reads:
