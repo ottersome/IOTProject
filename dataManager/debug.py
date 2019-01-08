@@ -14,8 +14,8 @@ while True:
     flago = False
     try:
     #Push data to a device feature called "Dummy_Sensor"
-        value2="0,1,2"
-        DAN.push ('debugRecipe', value2,  value2)
+        value2="0,3,2"
+        DAN.push ('debugRecipe', "estapijechotota",  value2)
 
 
     except Exception as e:
@@ -28,7 +28,5 @@ while True:
             time.sleep(1)    
         flago = True
 
-    if flago == False :
-        break
     time.sleep(0.2)
 
