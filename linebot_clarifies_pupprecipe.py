@@ -114,6 +114,7 @@ def handle_message(event):
                 line_bot_api.push_message(userId, TextSendMessage(text=site))
                 x=False
             except:
+                x=False
                 continue      
 
 
@@ -169,7 +170,7 @@ def handle_message(event):
         msg = msg[3]
         DAN.push('request_in',userId,msg)
         y = True
-        
+       #pulling the user's utensils or allergies 
         while(y):
             valores = DAN.pull('request_receive')
             print(valores)

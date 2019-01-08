@@ -1,4 +1,6 @@
 #Recipe API
+
+
 ##Introduction
 
 This is the final project for the "Design and Implementation of IOT Applications" at 
@@ -11,6 +13,7 @@ For this project, the following libraries need to be installed:
 -DAN
 -PIL
 -requests
+
 ##Description
 
 For this projecct, we decided to utilize a combination of the LineBot API, the Clarifai image
