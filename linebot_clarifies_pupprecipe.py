@@ -172,19 +172,30 @@ def handle_message(event):
         
         while(y):
             valores = DAN.pull('request_receive')
+            print(valores)
             if valores!=None:
                 print("receiving "+str(valores))
                 
                 if valores[2] =='allergies':
                     allergens ={'0':'Milk','1':'eggs','2':'Fish','3':'Shellfish', '4':'Tree Nuts', '5':'Peanuts','6':'Wheat','7':'Soybeans'}
-                    allergy_list = valores[1].split(',')
+                    valores = valores[1].split(',')
                     stringo='You are allergic to: '
-                    for dongxi in range(len(allergy_list)):
-                        stringo+=str(allergens[dongxi])+','
-                    print(stringo)
+                    for dongxi in valores:
+                        stringo+=allergens[dongxi]+','
+                    line_bot_api.push_message(userId, TextSendMessage(text=stringo))
                     y=False
                 elif valores[2] == 'utensils':
-                    utensil_list = {'0':'oven','1':'mixer','2':'knives','3':'DeepFryer','4':'peeler', '5':'blender'}
+                    utensil_list = {'0':'oven','1':'mixer','2':'knives','3':'DeepFryer','4':'peeler', '5':'blender'} 
+                    valores = valores[1].split(',')
+                    stringo = 'You currently posses: '
+                    for items in valores:
+                        stringo+=utensil_list[items]+','
+                    print(stringo)
+                    line_bot_api.push_message(userId, TextSendMessage(text=stringo)) 
+                    y=False
+            elif valores ==None:
+                print('received a None object for our request')
+                y=False
                 
     if not userId in user_id_set:
         user_id_set.add(userId)
